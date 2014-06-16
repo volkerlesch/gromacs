@@ -2387,7 +2387,6 @@ static void do_atom(t_fileio *fio, t_atom *atom, int ngrp, gmx_bool bRead,
                     int file_version, gmx_groups_t *groups, int atnr)
 {
     int i, myngrp;
-
     gmx_fio_do_real(fio, atom->m);
     gmx_fio_do_real(fio, atom->q);
     gmx_fio_do_real(fio, atom->mB);
@@ -2399,6 +2398,7 @@ static void do_atom(t_fileio *fio, t_atom *atom, int ngrp, gmx_bool bRead,
     if (file_version >= 52)
     {
         gmx_fio_do_int(fio, atom->atomnumber);
+        gmx_fio_do_real(fio, atom->gaussian);
     }
     else if (bRead)
     {

@@ -135,6 +135,16 @@ real get_atomtype_qB(int nt, gpp_atomtype_t ga)
     return ga->atom[nt].qB;
 }
 
+real get_atomtype_gaussian(int nt, gpp_atomtype_t ga)
+{
+    if ((nt < 0) || (nt >= ga->nr))
+    {
+        return NOTSET;
+    }
+
+    return ga->atom[nt].q;
+}
+
 int get_atomtype_ptype(int nt, gpp_atomtype_t ga)
 {
     if ((nt < 0) || (nt >= ga->nr))
@@ -215,6 +225,7 @@ real get_atomtype_S_hct(int nt, gpp_atomtype_t ga)
     return ga->S_hct[nt];
 }
 
+
 real get_atomtype_nbparam(int nt, int param, gpp_atomtype_t ga)
 {
     if ((nt < 0) || (nt >= ga->nr))
@@ -273,7 +284,7 @@ int set_atomtype(int nt, gpp_atomtype_t ga, t_symtab *tab,
                  t_atom *a, const char *name, t_param *nb,
                  int bondatomtype,
                  real radius, real vol, real surftens, int atomnumber,
-                 real gb_radius, real S_hct)
+                 real gb_radius, real S_hct )
 {
     if ((nt < 0) || (nt >= ga->nr))
     {
@@ -298,7 +309,7 @@ int add_atomtype(gpp_atomtype_t ga, t_symtab *tab,
                  t_atom *a, const char *name, t_param *nb,
                  int bondatomtype,
                  real radius, real vol, real surftens, real atomnumber,
-                 real gb_radius, real S_hct)
+                 real gb_radius, real S_hct )
 {
     int i;
 

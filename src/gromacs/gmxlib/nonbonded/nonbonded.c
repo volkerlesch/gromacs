@@ -500,6 +500,7 @@ nb_evaluate_single(real r2, real tabscale, real *vftab,
 
     fscal            = -(qq*FFe+c6*FFd+c12*FFr)*tabscale*rinv;
 
+
     return fscal;
 }
 

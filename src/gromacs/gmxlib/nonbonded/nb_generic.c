@@ -67,6 +67,7 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
     real          fscal, felec, fvdw, velec, vvdw, tx, ty, tz;
     real          rinvsq;
     real          iq;
+    real          ig,alphai,alphaj,alphaij,alphastari,alphastarj;
     real          qq, vctot;
     int           nti, nvdwparam;
     int           tj;
@@ -79,6 +80,7 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
     real          dx, dy, dz, rsq, rinv;
     real          c6, c12, c6grid, cexp1, cexp2, br;
     real *        charge;
+    real *        gaussian;
     real *        shiftvec;
     real *        vdwparam, *vdwgridparam;
     int *         shift;
@@ -98,7 +100,7 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
     real          rswitch_elec, rswitch_vdw, d, d2, sw, dsw, rinvcorr;
     real          elec_swV3, elec_swV4, elec_swV5, elec_swF2, elec_swF3, elec_swF4;
     real          vdw_swV3, vdw_swV4, vdw_swV5, vdw_swF2, vdw_swF3, vdw_swF4;
-    real          ewclj, ewclj2, ewclj6, ewcljrsq, poly, exponent, sh_lj_ewald;
+    real          ewclj, ewclj2, ewclj6, ewcljrsq, poly, exponent, sh_lj_ewald, ewc;
     gmx_bool      bExactElecCutoff, bExactVdwCutoff, bExactCutoff;
 
     x                   = xx[0];
@@ -123,6 +125,7 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
     sh_dispersion       = fr->ic->dispersion_shift.cpot;
     sh_repulsion        = fr->ic->repulsion_shift.cpot;
     sh_lj_ewald         = fr->ic->sh_lj_ewald;
+    ewc                 = fr->ewaldcoeff_q;
 
     ewclj               = fr->ewaldcoeff_lj;
     ewclj2              = ewclj*ewclj;
@@ -184,6 +187,7 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
     table_nelements     = 12;
 
     charge              = mdatoms->chargeA;
+    gaussian            = mdatoms->gaussian;
     type                = mdatoms->typeA;
     facel               = fr->epsfac;
     shiftvec            = fr->shift_vec[0];
@@ -205,6 +209,8 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
         iy               = shY + x[ii3+1];
         iz               = shZ + x[ii3+2];
         iq               = facel*charge[ii];
+        ig               = gaussian[ii];
+        alphai           = 1./(M_SQRT2*ig);
         nti              = nvdwparam*ntype*type[ii];
         vctot            = 0;
         vvdwtot          = 0;
@@ -298,6 +304,27 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
                         rinvcorr         = (fr->coulomb_modifier == eintmodPOTSHIFT) ? rinv-fr->ic->sh_ewald : rinv;
                         velec            = qq*(rinvcorr-(ewtab[ewitab+2]-ewtabhalfspace*eweps*(ewtab[ewitab]+felec)));
                         felec            = qq*rinv*(rinvsq-felec);
+                        break;
+
+                    case GMX_NBKERNEL_ELEC_EWALD_GAUSSIAN:
+                        r                = rsq*rinv;
+                        alphaj           = 1./(M_SQRT2*gaussian[jnr]);
+                        alphaij          = alphai * alphaj * gmx_invsqrt(alphai*alphai + alphaj*alphaj);
+		//	alphastari       = alphai * ewc  * gmx_invsqrt(alphai*alphai + ewc * ewc );
+	//		alphastarj       = alphaj * ewc  * gmx_invsqrt(alphaj*alphaj + ewc * ewc );
+
+                        velec            = (qq*rinv) * (gmx_erf(alphaij*r) -  gmx_erf(ewc*r) ); 
+                        felec            = (qq*rinvsq*rinv) * (gmx_erf(alphaij*r) -  gmx_erf(ewc*r) -
+                                               M_2_SQRTPI * r * (alphaij*exp(-(alphaij*alphaij*rsq))-ewc*exp(-(ewc*ewc*rsq))));
+
+
+//                        felec            = (qq*rinvsq*rinv) * (gmx_erf(alphaij*r) - 0.5 * gmx_erf(alphastari*r) - 0.5 * gmx_erf(alphastarj*r) -
+//                                                      M_2_SQRTPI * r * (alphaij*exp(-(alphaij*alphaij*rsq))
+//                                                                -0.5*alphastari*exp(-(alphastari*alphastari*rsq) )
+//                                                                -0.5*alphastarj*exp(-(alphastarj*alphastarj*rsq) )
+//                                                                       )
+//                                                      );
+
                         break;
 
                     default:

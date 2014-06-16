@@ -2617,6 +2617,9 @@ void init_forcerec(FILE              *fp,
         case eelPME:
         case eelEWALD:
             fr->nbkernel_elec_interaction = GMX_NBKERNEL_ELEC_EWALD;
+ 	    break;
+        case eelPMEG:
+            fr->nbkernel_elec_interaction = GMX_NBKERNEL_ELEC_EWALD_GAUSSIAN;
             break;
 
         default:
@@ -2671,6 +2674,7 @@ void init_forcerec(FILE              *fp,
                            fr->eeltype == eelEWALD ||
                            fr->eeltype == eelPME ||
                            fr->eeltype == eelRF ||
+                           fr->eeltype == eelPMEG ||
                            fr->eeltype == eelRF_ZERO);
 
         /* If the user absolutely wants different switch/shift settings for coul/vdw, it is likely
