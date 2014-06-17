@@ -310,21 +310,10 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
                         r                = rsq*rinv;
                         alphaj           = 1./(M_SQRT2*gaussian[jnr]);
                         alphaij          = alphai * alphaj * gmx_invsqrt(alphai*alphai + alphaj*alphaj);
-		//	alphastari       = alphai * ewc  * gmx_invsqrt(alphai*alphai + ewc * ewc );
-	//		alphastarj       = alphaj * ewc  * gmx_invsqrt(alphaj*alphaj + ewc * ewc );
 
                         velec            = (qq*rinv) * (gmx_erf(alphaij*r) -  gmx_erf(ewc*r) ); 
                         felec            = (qq*rinvsq*rinv) * (gmx_erf(alphaij*r) -  gmx_erf(ewc*r) -
                                                M_2_SQRTPI * r * (alphaij*exp(-(alphaij*alphaij*rsq))-ewc*exp(-(ewc*ewc*rsq))));
-
-
-//                        felec            = (qq*rinvsq*rinv) * (gmx_erf(alphaij*r) - 0.5 * gmx_erf(alphastari*r) - 0.5 * gmx_erf(alphastarj*r) -
-//                                                      M_2_SQRTPI * r * (alphaij*exp(-(alphaij*alphaij*rsq))
-//                                                                -0.5*alphastari*exp(-(alphastari*alphastari*rsq) )
-//                                                                -0.5*alphastarj*exp(-(alphastarj*alphastarj*rsq) )
-//                                                                       )
-//                                                      );
-
                         break;
 
                     default:
