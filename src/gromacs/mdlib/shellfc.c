@@ -34,6 +34,10 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out http://www.gromacs.org.
  */
+#define CONSTANTV
+#ifdef CONSTANTV
+#include <gsl/gsl_multimin.h>
+#endif
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -920,6 +924,79 @@ static void init_adir(FILE *log, gmx_shellfc_t shfc,
               NULL, NULL, nrnb, econqDeriv_FlexCon, FALSE, 0, 0);
 }
 
+#ifdef CONSTANTV
+typedef struct {
+                     FILE *            a0   ;   
+                     t_commrec *       a1   ;
+                     t_inputrec *      a2   ; 
+                     gmx_int64_t *     a3   ;
+                     t_nrnb*	       a4   ;
+                     gmx_wallcycle_t   a5   ;
+                     gmx_localtop_t *  a6   ;
+                     gmx_groups_t *    a7   ;
+                     matrix 	  *    a8   ;
+		     rvec 	   *   a9   ;
+		     history_t *       a10  ;
+                     rvec 	   *   a11  ;
+                     tensor 	       a12  ;
+                     t_mdatoms *       a13  ;
+                     gmx_enerdata_t *  a14  ;
+		     t_fcdata *	       a15  ;
+                     real *	       a16  ;
+		     struct t_graph *  a17  ;
+                     t_forcerec *      a18  ;
+                     gmx_vsite_t *     a19  ;
+		     rvec 	       a20  ;
+                     double 	  *    a21  ;
+		     FILE *	       a22  ;
+                     gmx_bool 	       a24  ;
+                     int 	   *   a25  ;
+                     int 	   *   a26  ;
+} minimization_params ;
+
+
+double to_be_minimized(const gsl_vector *xq, void * params){
+                     FILE *             log             = ((minimization_params*)params)->a0;
+                     t_commrec *        cr              = ((minimization_params*)params)->a1;
+                     t_inputrec *       inputrec        = ((minimization_params*)params)->a2;
+                     t_nrnb*		nrnb		= ((minimization_params*)params)->a4;       
+                     gmx_wallcycle_t 	wcycle		= ((minimization_params*)params)->a5;
+                     gmx_localtop_t *	top		= ((minimization_params*)params)->a6;
+                     gmx_groups_t *	groups		= ((minimization_params*)params)->a7;
+                     matrix 	*	box 		= ((minimization_params*)params)->a8;
+		     rvec 	*	x		= ((minimization_params*)params)->a9;
+		     history_t *	hist		= ((minimization_params*)params)->a10;
+                     rvec 	*	f		= ((minimization_params*)params)->a11;
+                     t_mdatoms *	mdatoms		= ((minimization_params*)params)->a13; 
+                     gmx_enerdata_t *	enerd 		= ((minimization_params*)params)->a14;
+		     t_fcdata *		fcd		= ((minimization_params*)params)->a15;
+                     real *		lambda 		= ((minimization_params*)params)->a16;
+		     struct t_graph *	graph		= ((minimization_params*)params)->a17;
+                     t_forcerec *	fr		= ((minimization_params*)params)->a18;
+                     gmx_vsite_t *	vsite 		= ((minimization_params*)params)->a19;
+                     double 		t 	       =*(((minimization_params*)params)->a21);
+		     FILE *		field 		= ((minimization_params*)params)->a22;
+                     gmx_bool 		bBornRadii	= ((minimization_params*)params)->a24;
+                     int 		flags	       =*(((minimization_params*)params)->a25);
+                     int 		nshell         =*(((minimization_params*)params)->a26);
+		     int  i,j,sh;
+                     rvec mu_tot;
+                     tensor 	 	vir_force	;
+		     for(i=0;i<DIM;i++) mu_tot[i]       = ((minimization_params*)params)->a20[i];      
+		     for(i=0;i<DIM;i++) for(j=0;j<DIM;j++) vir_force[i][j]=((minimization_params*)params)->a12[i][j];      
+
+                     for(i=0;i<nshell;i++){
+                         sh = s[i].shell;
+                         mdatoms->chargeA[sh]=gsl_vector_get(xq,i);
+                     }
+                     do_force(log, cr, inputrec, 1, nrnb, wcycle,
+                              top, groups, *box, x, hist,
+                              f, *(&vir_force),
+                              mdatoms, enerd, fcd, lambda, graph,
+                              fr, vsite, mu_tot, t, field, NULL, bBornRadii,
+                              flags);
+}
+#endif
 int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
                         gmx_int64_t mdstep, t_inputrec *inputrec,
                         gmx_bool bDoNS, int force_flags,
@@ -944,6 +1021,18 @@ int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
     t_shell   *shell;
     t_idef    *idef;
     rvec      *pos[2], *force[2], *acc_dir = NULL, *x_old = NULL;
+#ifdef CONSTANTV
+    const gsl_multimin_fminimizer_type *T = 
+             gsl_multimin_fminimizer_nmsimplex2;
+    gsl_multimin_fminimizer *s = NULL;
+    gsl_vector *ssq, *xq;
+    gsl_multimin_function minex_func;
+    size_t iter = 0;
+    int status;
+    double size;
+    int li,lj;
+    int sh;
+#endif
     real       Epot[2], df[2];
     rvec       dx;
     real       sf_dir, invdt;
@@ -963,6 +1052,52 @@ int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
     shell        = shfc->shell;
     nflexcon     = shfc->nflexcon;
 
+#ifdef CONSTANTV
+    printf("HERE %s %d\n",__FILE__,__LINE__);
+    minimization_params par;
+    xq = gsl_vector_alloc (nshell);
+    ssq = gsl_vector_alloc (nshell);
+    gsl_vector_set_all (ssq, 1.0);
+    for(i=0;i<nshell;i++){
+        sh = shell[i].shell;
+	gsl_vector_set(xq,i,(double)md->chargeA[sh]);
+    }
+    minex_func.n = nshell;
+    minex_func.f = &to_be_minimized;
+    s = gsl_multimin_fminimizer_alloc (T, nshell);
+
+
+    printf("HERE %s %d\n",__FILE__,__LINE__);
+    par.a0   =  fplog      ;  
+    par.a1   =  cr          ;  
+    par.a2   =  inputrec    ;  
+    par.a4   =  nrnb	   ;  
+    par.a5   =  wcycle	   ;  
+    par.a6   =  top	   ;  
+    par.a7   =  groups	   ;  
+    par.a8   =  &state->box 	   ;  
+    par.a9   =  state->x	   ;  
+    par.a10  =  &state->hist	   ;  
+    par.a11  =  f	   ;  
+    for(li=0;li<DIM;li++) for(lj=0;lj<DIM;lj++)par.a12[li][lj] = force_vir[li][lj];
+    par.a13  =  md	   ;  
+    par.a14  =  enerd 	   ;   
+    par.a15  =  fcd	   ;   
+    par.a16  =  state->lambda 	   ;   
+    par.a17  =  graph	   ;   
+    par.a18  =  fr	   ;   
+    par.a19  =  vsite 	   ;   
+    for(li=0;li<DIM;li++) par.a20[li] = mu_tot[li];
+    par.a21  =  &t 	   ;   
+    par.a22  =  fp_field 	   ;   
+    par.a24  =  bBornRadii  ;   
+    par.a25  =  &force_flags	   ;   
+    par.a26  =  &nshell;   
+
+
+    minex_func.params = (void*)&par;
+    printf("HERE %s %d\n",__FILE__,__LINE__);
+#else
     idef = &top->idef;
 
     if (DOMAINDECOMP(cr))
@@ -1124,7 +1259,25 @@ int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
      * low enough even without minimization.
      */
     *bConverged = (df[Min] < ftol);
+#endif
+#ifdef CONSTANTV
+    for(i=0;i<nshell;i++){
+        printf("before iteration: %d Charge: %f\n",count+1,md->chargeA[i]);
+    }
+    for (count = 1; (!(*bConverged) && (count < number_steps)); count++){
+      status = gsl_multimin_fminimizer_iterate(s);
+// TODO REMEMBER TO FREE GSL STRUCTURES !!!!!!!!!!!!!!!!!!!!!!!!!! 
+      *bConverged=(status==GSL_SUCCESS)?1:0;
+    }
+    printf("HERE %s %d\n",__FILE__,__LINE__);
+    for(i=0;i<nshell;i++){
+	md->chargeA[i]=(real)gsl_vector_get(s->x,i);
+        printf("iterations: %d Charge: %f\n",count,md->chargeA[i]);
+    }
 
+    printf("HERE %s %d\n",__FILE__,__LINE__);
+
+#else
     for (count = 1; (!(*bConverged) && (count < number_steps)); count++)
     {
         if (vsite)
@@ -1257,6 +1410,6 @@ int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
     /* Copy back the coordinates and the forces */
     memcpy(state->x, pos[Min], nat*sizeof(state->x[0]));
     memcpy(f, force[Min], nat*sizeof(f[0]));
-
+#endif
     return count;
 }
