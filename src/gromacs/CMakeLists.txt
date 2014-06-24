@@ -157,9 +157,10 @@ set_source_files_properties(selection/scanner.cpp PROPERTIES COMPILE_FLAGS "${_s
 
 FIND_PACKAGE(GSL REQUIRED)
 if (GSL_FOUND)
-      include_directories(${GSL_INCLUDE_DIRS})
-else (GSL_FOUND)
-	MESSAGE(FATAL_ERROR "GSL not found")
+      include_directories(${GSL_INCLUDE_DIR})
+      MESSAGE("GSL_INCLUDE_DIR= ${GSL_INCLUDE_DIR}")
+	else (GSL_FOUND)
+      MESSAGE(FATAL_ERROR "GSL not found")
 endif (GSL_FOUND)
 target_link_libraries(libgromacs ${GMX_GPU_LIBRARIES}
                       ${GMX_EXTRA_LIBRARIES}
