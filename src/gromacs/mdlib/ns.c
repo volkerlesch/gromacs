@@ -135,6 +135,7 @@ static void init_nblist(FILE *log, t_nblist *nl_sr, t_nblist *nl_lr,
     int       homenr;
     int       i, nn;
 
+printf("HERE %s %d\n",__FILE__,__LINE__);
     for (i = 0; (i < 2); i++)
     {
         nl     = (i == 0) ? nl_sr : nl_lr;
@@ -207,6 +208,7 @@ void init_neighbor_list(FILE *log, t_forcerec *fr, int homenr)
 
     /* maxsr     = homenr-fr->nWatMol*3; */
     maxsr     = homenr;
+printf("HERE %s %d\n",__FILE__,__LINE__);
 
     if (maxsr < 0)
     {

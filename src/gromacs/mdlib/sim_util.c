@@ -1596,6 +1596,7 @@ void do_force_cutsGROUP(FILE *fplog, t_commrec *cr,
 
     clear_mat(vir_force);
 
+printf("HERE (entered do_force_cutsGROUP) %s %d\n",__FILE__,__LINE__);
     cg0 = 0;
     if (DOMAINDECOMP(cr))
     {
@@ -1612,6 +1613,7 @@ void do_force_cutsGROUP(FILE *fplog, t_commrec *cr,
 
     bStateChanged  = (flags & GMX_FORCE_STATECHANGED);
     bNS            = (flags & GMX_FORCE_NS) && (fr->bAllvsAll == FALSE);
+printf("HERE (in CUTS: bNS=%d bAllvsAll=%d flags&GMX_FORCE_NS=%d) %s %d\n",bNS,fr->bAllvsAll ,(flags & GMX_FORCE_NS),__FILE__,__LINE__);
     /* Should we update the long-range neighborlists at this step? */
     bDoLongRangeNS = fr->bTwinRange && bNS;
     /* Should we perform the long-range nonbonded evaluation inside the neighborsearching? */
@@ -2052,6 +2054,7 @@ void do_force(FILE *fplog, t_commrec *cr,
               gmx_bool bBornRadii,
               int flags)
 {
+printf("HERE %s %d bNonbonded == %d$\n",__FILE__,__LINE__,fr->bNonbonded);
     /* modify force flag if not doing nonbonded */
     if (!fr->bNonbonded)
     {
@@ -2077,6 +2080,7 @@ void do_force(FILE *fplog, t_commrec *cr,
                                 flags);
             break;
         case ecutsGROUP:
+printf("HERE (cutsGROUP) %s %d \n",__FILE__,__LINE__);
             do_force_cutsGROUP(fplog, cr, inputrec,
                                step, nrnb, wcycle,
                                top,
