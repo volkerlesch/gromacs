@@ -997,6 +997,7 @@ double to_be_minimized(const gsl_vector *xq, void * params){
                               mdatoms, enerd, fcd, lambda, graph,
                               fr, vsite, mu_tot, t, field, NULL, bBornRadii,
                               flags);
+                     printf("flags=%d\n",flags);
                      printf("energy: %f %f %f\n",enerd->term[F_COUL_SR], enerd->term[F_COUL_LR] , enerd->term[F_COUL14] );
                      return enerd->term[F_COUL_SR] + enerd->term[F_COUL_LR] + enerd->term[F_COUL14] ;
 }
