@@ -256,7 +256,6 @@ printf("HERE: ENTERING NONBONDED GENERIC %s %d\n",__FILE__,__LINE__);
             {
                 qq               = iq*charge[jnr];
 
-exit(printf("DONE\n"));
                 switch (ielec)
                 {
                     case GMX_NBKERNEL_ELEC_NONE:

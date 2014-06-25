@@ -984,22 +984,28 @@ double to_be_minimized(const gsl_vector *xq, void * params){
 		     int  i,j,sh;
                      rvec mu_tot;
                      tensor 	 	vir_force	;
+                     double multiplier=0;
+                     double self=0;
 		     for(i=0;i<DIM;i++) mu_tot[i]       = ((minimization_params*)params)->a20[i];      
 		     for(i=0;i<DIM;i++) for(j=0;j<DIM;j++) vir_force[i][j]=((minimization_params*)params)->a12[i][j];      
 
                      for(i=0;i<nshell;i++){
                          sh = shfc->shell[i].shell;
                          mdatoms->chargeA[sh]=gsl_vector_get(xq,i);
+printf("CHARGE:%d  %d %f\n",i,sh,mdatoms->chargeA[sh]);
+			 multiplier+=0.01*mdatoms->chargeA[sh];
+                         self+=mdatoms->chargeA[sh]*mdatoms->chargeA[sh];
+
                      }
                      do_force(log, cr, inputrec, 1, nrnb, wcycle,
                               top, groups, *box, x, hist,
                               f, *(&vir_force),
                               mdatoms, enerd, fcd, lambda, graph,
                               fr, vsite, mu_tot, t, field, NULL, bBornRadii,
-                              flags);
+                              flags|GMX_FORCE_NS);
                      printf("flags=%d\n",flags);
-                     printf("energy: %f %f %f\n",enerd->term[F_COUL_SR], enerd->term[F_COUL_LR] , enerd->term[F_COUL14] );
-                     return enerd->term[F_COUL_SR] + enerd->term[F_COUL_LR] + enerd->term[F_COUL14] ;
+                     printf("energy: %f %f %f %f\n",enerd->term[F_COUL_SR], enerd->term[F_COUL_LR] , enerd->term[F_COUL14] ,self);
+                     return enerd->term[F_COUL_SR] + enerd->term[F_COUL_LR] + enerd->term[F_COUL14] + multiplier + self;
 }
 #endif
 int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
@@ -1275,16 +1281,21 @@ int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
     gsl_multimin_fminimizer_set (s, &minex_func, xq, ssq);
 
     for (count = 1; (!(*bConverged) && (count < number_steps)); count++){
-    printf("___________ MINIMIZING %s %d \n",__FILE__,__LINE__);
-      status = gsl_multimin_fminimizer_iterate(s);
-    printf("___________ ITERATION DONE %s %d \n",__FILE__,__LINE__);
-// TODO REMEMBER TO FREE GSL STRUCTURES !!!!!!!!!!!!!!!!!!!!!!!!!! 
-      *bConverged=(status==GSL_SUCCESS)?1:0;
+	 double size;
+         status = gsl_multimin_fminimizer_iterate(s);
+         if(status) { *bConverged=0 ; count=number_steps; printf("PROBLEM WITH MINIMIZER, status==%d\n",status);}         
+		// TODO REMEMBER TO FREE GSL STRUCTURES !!!!!!!!!!!!!!!!!!!!!!!!!! 
+         size = gsl_multimin_fminimizer_size (s);
+         status = gsl_multimin_test_size (size, ftol);
+          if (status == GSL_SUCCESS) {
+             printf("SUCCESS size=%f ftol=%f value=%f\n",size,ftol,s->fval);
+             *bConverged=(status==GSL_SUCCESS)?1:0;
+          }
     }
     printf("HERE %s %d\n",__FILE__,__LINE__);
     for(i=0;i<nshell;i++){
-        sh = shell[i].shell;
-		md->chargeA[sh]=(real)gsl_vector_get(s->x,i);
+         sh = shell[i].shell;
+	//	md->chargeA[sh]=(real)gsl_vector_get(s->x,i);
         printf("iterations: %d Charge: %f\n",count,md->chargeA[sh]);
     }
 
