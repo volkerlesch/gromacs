@@ -82,6 +82,7 @@ void ns(FILE              *fp,
     char   *ptr;
     int     nsearch;
 
+printf("HERE %s %d\n",__FILE__,__LINE__);
 
     if (!fr->ns.nblist_initialized)
     {

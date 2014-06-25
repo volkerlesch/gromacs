@@ -102,7 +102,7 @@ gmx_nb_generic_kernel(t_nblist *                nlist,
     real          vdw_swV3, vdw_swV4, vdw_swV5, vdw_swF2, vdw_swF3, vdw_swF4;
     real          ewclj, ewclj2, ewclj6, ewcljrsq, poly, exponent, sh_lj_ewald, ewc;
     gmx_bool      bExactElecCutoff, bExactVdwCutoff, bExactCutoff;
-
+printf("HERE: ENTERING NONBONDED GENERIC %s %d\n",__FILE__,__LINE__);
     x                   = xx[0];
     f                   = ff[0];
     ielec               = nlist->ielec;
