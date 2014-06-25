@@ -223,6 +223,7 @@ gmx_nonbonded_set_kernel_pointers(FILE *log, t_nblist *nl)
     int              narch = asize(arch_and_padding);
     int              i;
 
+printf("HERE %s %d\n",__FILE__,__LINE__);
     if (nonbonded_setup_done == FALSE)
     {
         /* We typically call this setup routine before starting timers,

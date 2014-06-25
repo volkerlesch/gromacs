@@ -957,7 +957,6 @@ typedef struct {
 
 
 double to_be_minimized(const gsl_vector *xq, void * params){
-/*
                      FILE *             log             = ((minimization_params*)params)->a0;
                      t_commrec *        cr              = ((minimization_params*)params)->a1;
                      t_inputrec *       inputrec        = ((minimization_params*)params)->a2;
@@ -1000,8 +999,6 @@ double to_be_minimized(const gsl_vector *xq, void * params){
                               flags);
                      printf("energy: %f %f %f\n",enerd->term[F_COUL_SR], enerd->term[F_COUL_LR] , enerd->term[F_COUL14] );
                      return enerd->term[F_COUL_SR] + enerd->term[F_COUL_LR] + enerd->term[F_COUL14] ;
-*/
-                     return gsl_vector_get(xq,0);
 }
 #endif
 int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
@@ -1274,6 +1271,8 @@ int relax_shell_flexcon(FILE *fplog, t_commrec *cr, gmx_bool bVerbose,
         sh = shell[i].shell;
         printf("before iteration: %d Charge: %f\n",count+1,md->chargeA[sh]);
     }
+    gsl_multimin_fminimizer_set (s, &minex_func, xq, ssq);
+
     for (count = 1; (!(*bConverged) && (count < number_steps)); count++){
     printf("___________ MINIMIZING %s %d \n",__FILE__,__LINE__);
       status = gsl_multimin_fminimizer_iterate(s);
